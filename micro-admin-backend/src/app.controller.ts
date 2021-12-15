@@ -31,20 +31,47 @@ export class AppController {
       await channel.akc(originalMsg);
     } catch (error) {
       this.logger.error(`error: ${JSON.stringify(error)}`);
-      ackError.map(async (ackError) => {
-        if (error.message.includes(ackError)) {
-          await channel.ack(originalMsg);
-        }
-      });
+      const filterAckError = ackError.filter((ackError) =>
+        error.message.includes(ackError),
+      );
+      if (filterAckError) {
+        await channel.ack(originalMsg);
+      }
     }
   }
 
   @MessagePattern('consult-categorie')
-  async consultCategorie(@Payload() id: string) {
-    if (id) {
-      return await this.appService.consultOneCategorie(id);
-    } else {
-      return await this.appService.consultAllCategories();
+  async consultCategorie(@Payload() id: string, @Ctx() context: RmqContext) {
+    const channel = context.getChannelRef();
+    const originalMsg = context.getMessage();
+    try {
+      if (id) {
+        return await this.appService.consultOneCategorie(id);
+      } else {
+        return await this.appService.consultAllCategories();
+      }
+    } finally {
+      await channel.ack(originalMsg);
+    }
+  }
+
+  @EventPattern('update-categorie')
+  async updateCategorie(@Payload() data: any, @Ctx() context: RmqContext) {
+    const channel = context.getChannelRef();
+    const originalMsg = context.getMessage();
+    this.logger.log(`data: ${JSON.stringify(data)}`);
+    try {
+      const id: string = data.id;
+      const categorie: Categorie = data.categories;
+      await this.appService.updateCategorie(id, categorie);
+      await channel.ack(originalMsg);
+    } catch (error) {
+      const filterAckError = ackError.filter((ackError) =>
+        error.message.includes(ackError),
+      );
+      if (filterAckError) {
+        await channel.ack(originalMsg);
+      }
     }
   }
 }
