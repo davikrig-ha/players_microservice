@@ -4,6 +4,7 @@ import {
   Get,
   Logger,
   Post,
+  Query,
   UsePipes,
   ValidationPipe,
 } from '@nestjs/common';
@@ -12,6 +13,7 @@ import {
   ClientProxyFactory,
   Transport,
 } from '@nestjs/microservices';
+import { Observable } from 'rxjs';
 import { CreateCategorieDto } from './dtos/create-categorie.dto';
 
 @Controller('api')
@@ -33,11 +35,11 @@ export class AppController {
   @Post('categories')
   @UsePipes(ValidationPipe)
   async createCategorie(@Body() createCategorieDto: CreateCategorieDto) {
-    return await this.clientAdminBackend.emit(
-      'create-categorie',
-      createCategorieDto,
-    );
+    this.clientAdminBackend.emit('create-categorie', createCategorieDto);
   }
 
-  
+  @Get('categories')
+  consultCategorie(@Query('idCategorie') id: string): Observable<any> {
+    return this.clientAdminBackend.send('consult-categorie', id ? id : '');
+  }
 }
